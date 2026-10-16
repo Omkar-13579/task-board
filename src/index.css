@@ -1,0 +1,117 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fb;
+  color: #202938;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: 30px;
+}
+
+.subtitle {
+  color: #687386;
+  margin-bottom: 28px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.column {
+  min-height: 350px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.column h2 {
+  margin: 0 0 18px;
+  font-size: 18px;
+}
+
+/* Different colors for the three columns */
+
+.column.todo {
+  background: #eaf2ff;
+  border-color: #c9dcff;
+}
+
+.column.progress {
+  background: #fff3df;
+  border-color: #f3d7a3;
+}
+
+.column.done {
+  background: #e5f7eb;
+  border-color: #b8e4c6;
+}
+
+/* Highlight the column while dragging over it */
+
+.column-over {
+  border: 2px dashed #64748b !important;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 260px;
+}
+
+.task-card {
+  padding: 15px;
+  background: white;
+  border: 1px solid #e0e5ed;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.task-card:active {
+  cursor: grabbing;
+}
+
+.task-card.dragging {
+  opacity: .65;
+  z-index: 10;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.empty-message {
+  color: #8993a3;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px 8px;
+  border: 1px dashed #cbd2de;
+  border-radius: 8px;
+}
+
+@media (max-width: 700px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+
+  .column {
+    min-height: 220px;
+  }
+}
