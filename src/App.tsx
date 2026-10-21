@@ -15,7 +15,7 @@ const columns: { id: Status; title: string }[] = [
   { id: "done", title: "Done" },
 ];
 
- 
+
 function TaskCard({
   task,
   onDelete,
@@ -28,51 +28,91 @@ function TaskCard({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: task.id });
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+
+  function saveTitle() {
+  const title = editedTitle.trim();
+
+  if (!title) return;
+
+  onEdit(task.id, title);
+  setIsEditing(false);
+}
+
+  function cancelEdit() {
+    setEditedTitle(task.title);
+    setIsEditing(false);
+  }
+
   return (
     <div
-    {...listeners}
-    {...attributes}
+      {...listeners}
+      {...attributes}
       ref={setNodeRef}
       className={`task-card ${isDragging ? "dragging" : ""}`}
       style={{
         transform: transform
           ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
           : undefined,
-      }}  
+      }}
     >
-      <div
-        className="task-title"
-      >
-        {task.title}
-      </div>  
+      
+<div className="task-title-row">
+  {isEditing ? (
+  <input
+    className="edit-input"
+    value={editedTitle}
+    onChange={(event) => setEditedTitle(event.target.value)}  
+    onPointerDown={(event) => event.stopPropagation()}
+    onKeyDown={(event) => {
+      if (event.key === "Enter") saveTitle();
+      if (event.key === "Escape") cancelEdit();
+    }}
+    autoFocus
+  />
+) : (
+  <div className="task-title">{task.title}</div>
+)}
 
-      <div className="task-actions">
-        <button
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => {
-            const title = window.prompt("Edit task:", task.title);
+  <div className="task-icon-actions">
+    <button
+      type="button"
+      className="icon-button"
+      title={isEditing ? "Save task" : "Edit task"}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
 
-            if (title !== null && title.trim() !== "") {
-              onEdit(task.id, title.trim());
-            }
-          }}
-        >
-          Edit
-        </button>
+        if (isEditing) {
+          saveTitle();
+        } else {
+          setEditedTitle(task.title);
+          setIsEditing(true);
+        }
+      }}
+    >
+      {isEditing ? "✓" : "✎"}
+    </button>
 
-        <button
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onDelete(task.id);
-          }}
-        >
-          Delete
-        </button>
+    <button
+      type="button"
+      className="icon-button delete-icon"
+      title="Delete task"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onDelete(task.id);
+      }}
+    >
+      ×
+      </button>
       </div>
     </div>
+  </div>
   );
-}
+} 
+
 
 
 function TaskColumn({
@@ -80,12 +120,14 @@ function TaskColumn({
   tasks,
   onDelete,
   onEdit,
+  count,
 }: {
   column: { id: Status; title: string };
 
   tasks: Task[];
   onDelete: (id: string) => void;
   onEdit: (id: string, title: string) => void;
+  count: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -94,10 +136,10 @@ function TaskColumn({
       ref={setNodeRef}
       className={`column ${column.id} ${isOver ? "column-over" : ""}`}
     >
-      <h2>{column.title}</h2>
+      <h2>{column.title} ({count})</h2>
 
       <div className="task-list">
-        {tasks.map((task) => (
+        {tasks.map((task) => (  
           <TaskCard
             key={task.id}
             task={task}
@@ -200,15 +242,22 @@ function App() {
 
       <DndContext onDragEnd={handleDragEnd}>
         <div className="board">
-          {columns.map((column) => (
-            <TaskColumn
-              key={column.id}
-              column={column}
-              tasks={tasks.filter((task) => task.status === column.id)}
-              onDelete={deleteTask}
-              onEdit={editTask}
-            />
-        ))}
+          {columns.map((column) => {
+            const columnTasks = tasks.filter(
+              (task) => task.status === column.id
+            );
+
+            return (
+              <TaskColumn
+                key={column.id}
+                column={column}
+                tasks={columnTasks}
+                onDelete={deleteTask}
+                onEdit={editTask}
+                count={columnTasks.length}
+              />
+            );
+          })}
         </div>
       </DndContext>
     </main>

@@ -163,6 +163,81 @@ h1 {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
+.edit-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 0;
+  border: none;
+  border-bottom: 1px solid #a5b4fc;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.edit-input:focus {
+  border-bottom-color: #6366f1;
+}
+
+.task-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.task-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.edit-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  border: none;
+  border-bottom: 1px solid #a5b4fc;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.icon-button {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 17px;
+}
+
+.icon-button:hover {
+  background: #f3f4f6;
+}
+
+.task-icon-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.delete-icon:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
 
 @media (max-width: 700px) {
   .board {
