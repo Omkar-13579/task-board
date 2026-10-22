@@ -220,8 +220,25 @@ function App() {
 
   return (
     <main>
-      <h1>My Task Board</h1>
-      <p className="subtitle">Organize your work, one task at a time.</p>
+      
+      <header className="app-header">
+        <div className="header-brand">
+          <div className="brand-icon">✓</div>
+
+          <div>
+            <h1>TaskFlow</h1>
+            <p>Organize your work, one task at a time.</p>
+          </div>
+        </div>
+
+        <div className="workspace-badge">
+          <div className="avatar">O</div>
+          <div className="workspace-info">
+            <span>My workspace</span>
+            <small>Local account</small>
+          </div>
+        </div>
+      </header>
 
       <div className="add-task">
         <input
