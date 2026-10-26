@@ -1,15 +1,20 @@
-
 import express from "express";
+import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 
 const app = express();
 const PORT = 3000;
 
-// Better Auth handles signup, login, logout, and sessions.
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
-// Keep this after the Better Auth handler.
 app.use(express.json());
 
 app.get("/", (_req, res) => {

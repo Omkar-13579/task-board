@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
+import AuthForm from "./AuthForm";
+import { authClient } from "./auth-client";
 
 type Status = "todo" | "progress" | "done";
 
@@ -158,6 +160,8 @@ function TaskColumn({
 
 
 function App() {
+  const { data: session, isPending } = authClient.useSession();
+
   const [tasks, setTasks] = useState<Task[]>(() => {
   const savedTasks = localStorage.getItem("tasks");
 
@@ -212,10 +216,18 @@ function App() {
     setTasks((currentTasks) =>
       currentTasks.map((task) =>
         task.id === String(active.id)
-          ? { ...task, status: newStatus as Status }
-          : task
-      )
-    );
+    ? { ...task, status: newStatus as Status }
+    : task
+   )
+  );
+  }
+
+  if (isPending) {
+    return <p>Loading...</p>;
+  }
+
+  if (!session) {
+    return <AuthForm />;
   }
 
   return (

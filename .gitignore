@@ -3,12 +3,15 @@ server/node_modules/
 .env
 .env.*
 !.env.example
+
 dist/
 server/dist/
+
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
+
 npm-debug.log*
 *.tsbuildinfo
 .vscode/
