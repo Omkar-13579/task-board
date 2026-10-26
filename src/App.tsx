@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import AuthForm from "./AuthForm";
@@ -11,12 +12,13 @@ type Task = {
   status: Status;
 };
 
+const API_URL = "http://localhost:3000/api/tasks";
+
 const columns: { id: Status; title: string }[] = [
   { id: "todo", title: "To Do" },
   { id: "progress", title: "In Progress" },
   { id: "done", title: "Done" },
 ];
-
 
 function TaskCard({
   task,
@@ -34,13 +36,17 @@ function TaskCard({
   const [editedTitle, setEditedTitle] = useState(task.title);
 
   function saveTitle() {
-  const title = editedTitle.trim();
+    const title = editedTitle.trim();
 
-  if (!title) return;
+    if (!title || title === task.title) {
+      setEditedTitle(task.title);
+      setIsEditing(false);
+      return;
+    }
 
-  onEdit(task.id, title);
-  setIsEditing(false);
-}
+    onEdit(task.id, title);
+    setIsEditing(false);
+  }
 
   function cancelEdit() {
     setEditedTitle(task.title);
@@ -59,63 +65,60 @@ function TaskCard({
           : undefined,
       }}
     >
-      
-<div className="task-title-row">
-  {isEditing ? (
-  <input
-    className="edit-input"
-    value={editedTitle}
-    onChange={(event) => setEditedTitle(event.target.value)}  
-    onPointerDown={(event) => event.stopPropagation()}
-    onKeyDown={(event) => {
-      if (event.key === "Enter") saveTitle();
-      if (event.key === "Escape") cancelEdit();
-    }}
-    autoFocus
-  />
-) : (
-  <div className="task-title">{task.title}</div>
-)}
+      <div className="task-title-row">
+        {isEditing ? (
+          <input
+            className="edit-input"
+            value={editedTitle}
+            onChange={(event) => setEditedTitle(event.target.value)}
+            onPointerDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") saveTitle();
+              if (event.key === "Escape") cancelEdit();
+            }}
+            autoFocus
+          />
+        ) : (
+          <div className="task-title">{task.title}</div>
+        )}
 
-  <div className="task-icon-actions">
-    <button
-      type="button"
-      className="icon-button"
-      title={isEditing ? "Save task" : "Edit task"}
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation();
+        <div className="task-icon-actions">
+          <button
+            type="button"
+            className="icon-button"
+            title={isEditing ? "Save task" : "Edit task"}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
 
-        if (isEditing) {
-          saveTitle();
-        } else {
-          setEditedTitle(task.title);
-          setIsEditing(true);
-        }
-      }}
-    >
-      {isEditing ? "✓" : "✎"}
-    </button>
+              if (isEditing) {
+                saveTitle();
+              } else {
+                setEditedTitle(task.title);
+                setIsEditing(true);
+              }
+            }}
+          >
+            {isEditing ? "✓" : "✎"}
+          </button>
 
-    <button
-      type="button"
-      className="icon-button delete-icon"
-      title="Delete task"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation();
-        onDelete(task.id);
-      }}
-    >
-      ×
-      </button>
+          <button
+            type="button"
+            className="icon-button delete-icon"
+            title="Delete task"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(task.id);
+            }}
+          >
+            ×
+          </button>
+        </div>
       </div>
     </div>
-  </div>
   );
-} 
-
-
+}
 
 function TaskColumn({
   column,
@@ -125,7 +128,6 @@ function TaskColumn({
   count,
 }: {
   column: { id: Status; title: string };
-
   tasks: Task[];
   onDelete: (id: string) => void;
   onEdit: (id: string, title: string) => void;
@@ -138,10 +140,12 @@ function TaskColumn({
       ref={setNodeRef}
       className={`column ${column.id} ${isOver ? "column-over" : ""}`}
     >
-      <h2>{column.title} ({count})</h2>
+      <h2>
+        {column.title} ({count})
+      </h2>
 
       <div className="task-list">
-        {tasks.map((task) => (  
+        {tasks.map((task) => (
           <TaskCard
             key={task.id}
             task={task}
@@ -158,53 +162,158 @@ function TaskColumn({
   );
 }
 
-
 function App() {
   const { data: session, isPending } = authClient.useSession();
 
-  const [tasks, setTasks] = useState<Task[]>(() => {
-  const savedTasks = localStorage.getItem("tasks");
-
-  return savedTasks ? JSON.parse(savedTasks) : [
-    { id: "1", title: "Learn React components", status: "todo" },
-    { id: "2", title: "Understand useState", status: "progress" },
-    { id: "3", title: "Set up the project", status: "done" },
-  ];
-});
-
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [taskError, setTaskError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-   localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
-  
-  function addTask() {
-    const title = newTask.trim();
-    if (!title) return;
-    const task: Task = {  
-    id: crypto.randomUUID(),
-    title,
-    status: "todo",
+    if (isPending) return;
+
+    if (!session) {
+      setTasks([]);
+      setTasksLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadTasks() {
+      setTasksLoading(true);
+      setTaskError("");
+
+      try {
+        const response = await fetch(API_URL, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            response.status === 401
+              ? "Your session expired. Please log in again."
+              : "Could not load tasks."
+          );
+        }
+
+        const data: Task[] = await response.json();
+
+        if (!cancelled) {
+          setTasks(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setTaskError(
+            error instanceof Error
+              ? error.message
+              : "Could not connect to the backend."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setTasksLoading(false);
+        }
+      }
+    }
+
+    void loadTasks();
+
+    return () => {
+      cancelled = true;
     };
-    setTasks((currentTasks) => [...currentTasks, task]);
-    setNewTask("");
-}
+  }, [session, isPending]);
 
-    function deleteTask(id: string) {
-    setTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== id)
-    );
+  async function addTask() {
+    const title = newTask.trim();
+
+    if (!title || saving) return;
+
+    setSaving(true);
+    setTaskError("");
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, status: "todo" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not add task.");
+      }
+
+      const task: Task = await response.json();
+
+      setTasks((current) => [...current, task]);
+      setNewTask("");
+    } catch (error) {
+      setTaskError(
+        error instanceof Error ? error.message : "Could not add task."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function editTask(id: string, title: string) {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === id ? { ...task, title } : task
-      )
-    );
+  async function deleteTask(id: string) {
+    setTaskError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not delete task.");
+      }
+
+      setTasks((current) => current.filter((task) => task.id !== id));
+    } catch (error) {
+      setTaskError(
+        error instanceof Error ? error.message : "Could not delete task."
+      );
+    }
   }
 
-  function handleDragEnd(event: any) {
+  async function editTask(id: string, title: string) {
+    setTaskError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not edit task.");
+      }
+
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === id ? { ...task, title } : task
+        )
+      );
+    } catch (error) {
+      setTaskError(
+        error instanceof Error ? error.message : "Could not edit task."
+      );
+    }
+  }
+
+  async function handleDragEnd(event: any) {
     const { active, over } = event;
 
     if (!over) return;
@@ -213,13 +322,39 @@ function App() {
 
     if (!columns.some((column) => column.id === newStatus)) return;
 
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === String(active.id)
-    ? { ...task, status: newStatus as Status }
-    : task
-   )
-  );
+    const task = tasks.find((item) => item.id === String(active.id));
+
+    if (!task || task.status === newStatus) return;
+
+    setTaskError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${encodeURIComponent(task.id)}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not move task.");
+      }
+
+      setTasks((current) =>
+        current.map((item) =>
+          item.id === task.id
+            ? { ...item, status: newStatus as Status }
+            : item
+        )
+      );
+    } catch (error) {
+      setTaskError(
+        error instanceof Error ? error.message : "Could not move task."
+      );
+    }
   }
 
   if (isPending) {
@@ -232,7 +367,6 @@ function App() {
 
   return (
     <main>
-      
       <header className="app-header">
         <div className="header-brand">
           <div className="brand-icon">✓</div>
@@ -244,13 +378,31 @@ function App() {
         </div>
 
         <div className="workspace-badge">
-          <div className="avatar">O</div>
-          <div className="workspace-info">
-            <span>My workspace</span>
-            <small>Local account</small>
+          <div className="avatar">
+            {session.user.name?.charAt(0).toUpperCase() || "U"}
           </div>
+
+          <div className="workspace-info">
+            <span>{session.user.name || "My workspace"}</span>
+            <small>{session.user.email}</small>
+          </div>
+
+          <button
+            className="logout-button"
+            onClick={() => void authClient.signOut()}
+          >
+            Log out
+          </button>
         </div>
       </header>
+
+      {tasksLoading && <p>Loading tasks...</p>}
+
+      {taskError && (
+        <p role="alert" className="auth-error">
+          {taskError}
+        </p>
+      )}
 
       <div className="add-task">
         <input
@@ -260,13 +412,14 @@ function App() {
           onChange={(event) => setNewTask(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
-              addTask();
+              void addTask();
             }
           }}
         />
 
-
-        <button onClick={addTask}>Add Task</button>
+        <button onClick={() => void addTask()} disabled={saving}>
+          {saving ? "Adding..." : "Add Task"}
+        </button>
       </div>
 
       <DndContext onDragEnd={handleDragEnd}>
